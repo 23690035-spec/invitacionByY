@@ -126,7 +126,7 @@ const CONFIG={
   vestimenta:'Casual, ven cómodo',
   whatsapp:'524831276661',       // país + número, sin + ni espacios
   webhook:'https://script.google.com/macros/s/AKfycbzypHPUr-4txwYH7u-ZGwIKRW69vdAIqem-QBh4cYLP4YXlxoOSKH5KDTtq3EOQcvD3/exec',                     // URL de la Web App de Apps Script (termina en /exec)
-  refrescoMs:5000
+  refrescoMs:15000
 };
 /* ================================================= */
 const $=id=>document.getElementById(id);
@@ -182,18 +182,12 @@ function pintar(){const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<'
  $('filas').innerHTML=lista.map(r=>`<tr><td class="py-2 pr-2">${esc(r.nombre)}</td><td>${r.asistencia==='SI'?'<span class="text-emerald-300">Sí</span>':'<span class="text-red-300">No</span>'}</td><td class="text-right text-ink/60 text-xs">${fmt(r.fecha)}</td></tr>`).join('')||'<tr><td colspan="3" class="py-4 text-center text-ink/50">Sin respuestas todavía.</td></tr>';
  const si=lista.filter(r=>r.asistencia==='SI').length;$('nSi').textContent=si;$('nNo').textContent=lista.length-si;$('nTot').textContent=lista.length}
 async function cargar(){
- const mapa=new Map(store.get().map(r=>[r.id,r]));let fuente='este dispositivo';
+ let datos=null,fuente='este dispositivo';
  if(CONFIG.webhook&&clave){try{const j=await(await fetch(CONFIG.webhook+'?key='+encodeURIComponent(clave))).json();
    if(!j.ok){$('estado').textContent='Clave incorrecta';sessionStorage.removeItem('k');clave='';return}
-   j.data.forEach(r=>mapa.set(r.id,r));fuente='Google Sheets'}catch(e){fuente='este dispositivo (sin conexión)'}}
- lista.length=0;lista.push(...mapa.values());pintar();$('estado').textContent='Fuente: '+fuente+' · se actualiza cada '+CONFIG.refrescoMs/1000+' s'}
-function iniciar(){cargar();clearInterval(timer);timer=setInterval(cargar,CONFIG.refrescoMs)}
-$('host').onclick=()=>{$('panel').showModal();$('clave').classList.toggle('hidden',!CONFIG.webhook||!!clave);if(!CONFIG.webhook||clave)iniciar();else pintar()};
-$('clave').onsubmit=e=>{e.preventDefault();clave=$('k').value.trim();sessionStorage.setItem('k',clave);$('clave').classList.add('hidden');iniciar()};
-$('cerrar').onclick=()=>$('panel').close();$('panel').addEventListener('close',()=>clearInterval(timer));
-$('csv').onclick=()=>{if(!lista.length)return;const q=s=>'"'+clean(s).replace(/"/g,'""')+'"';
- const rows=['Nombre,Asistencia,Fecha',...lista.map(r=>[q(r.nombre),q(r.asistencia==='SI'?'Sí':'No'),q(new Date(r.fecha).toLocaleString('es-MX'))].join(','))];
- const a=document.createElement('a');a.href=URL.createObjectURL(new Blob(['\uFEFF'+rows.join('\r\n')],{type:'text/csv;charset=utf-8'}));a.download='asistentes-bernabe-yeira.csv';a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000)};
+   datos=j.data;fuente='Google Sheets'}catch(e){fuente='este dispositivo (sin conexión)'}}
+ if(!datos)datos=store.get();
+ lista.length=0;lista.push(...datos);pintar();$('estado').textContent='Fuente: '+fuente+' · se actualiza cada '+CONFIG.refrescoMs/1000+' s'}
 
 /* ===== GOOGLE APPS SCRIPT (pega esto en script.google.com, vinculado a tu hoja) =====
 const CLAVE='CAMBIA_ESTA_CLAVE', HOJA='Confirmaciones';
