@@ -184,11 +184,17 @@ function pintar(){const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<'
 async function cargar(){
  let datos=null,fuente='este dispositivo';
  if(CONFIG.webhook&&clave){try{const j=await(await fetch(CONFIG.webhook+'?key='+encodeURIComponent(clave))).json();
-   if(!j.ok){$('estado').textContent='Clave incorrecta';sessionStorage.removeItem('k');clave='';return}
+   if(!j.ok){$('estado').textContent='Clave incorrecta';sessionStorage.removeItem('k');clave='';$('clave').classList.remove('hidden');clearInterval(timer);return}
    datos=j.data;fuente='Google Sheets'}catch(e){fuente='este dispositivo (sin conexión)'}}
  if(!datos)datos=store.get();
  lista.length=0;lista.push(...datos);pintar();$('estado').textContent='Fuente: '+fuente+' · se actualiza cada '+CONFIG.refrescoMs/1000+' s'}
-
+function iniciar(){cargar();clearInterval(timer);timer=setInterval(cargar,CONFIG.refrescoMs)}
+$('host').onclick=()=>{$('panel').showModal();$('clave').classList.toggle('hidden',!CONFIG.webhook||!!clave);if(!CONFIG.webhook||clave)iniciar();else pintar()};
+$('clave').onsubmit=e=>{e.preventDefault();clave=$('k').value.trim();sessionStorage.setItem('k',clave);$('clave').classList.add('hidden');iniciar()};
+$('cerrar').onclick=()=>$('panel').close();$('panel').addEventListener('close',()=>clearInterval(timer));
+$('csv').onclick=()=>{if(!lista.length)return;const q=s=>'"'+clean(s).replace(/"/g,'""')+'"';
+ const rows=['Nombre,Asistencia,Fecha',...lista.map(r=>[q(r.nombre),q(r.asistencia==='SI'?'Sí':'No'),q(new Date(r.fecha).toLocaleString('es-MX'))].join(','))];
+ const a=document.createElement('a');a.href=URL.createObjectURL(new Blob(['\uFEFF'+rows.join('\r\n')],{type:'text/csv;charset=utf-8'}));a.download='asistentes-bernabe-yeira.csv';a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000)};
 /* ===== GOOGLE APPS SCRIPT (pega esto en script.google.com, vinculado a tu hoja) =====
 const CLAVE='CAMBIA_ESTA_CLAVE', HOJA='Confirmaciones';
 function hoja_(){const ss=SpreadsheetApp.getActiveSpreadsheet();let s=ss.getSheetByName(HOJA);if(!s){s=ss.insertSheet(HOJA);s.appendRow(['ID','Fecha','Nombre','Asistencia']);}return s;}
